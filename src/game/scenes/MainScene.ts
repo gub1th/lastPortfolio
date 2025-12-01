@@ -1,18 +1,20 @@
 import Phaser from 'phaser';
 import { useStore } from '../../store';
-import { COLLISION_TILES, TILES } from '../constants/tiles';
+import { createCroppedSprite } from '../constants/japaneseInteriorAtlas';
+import { TILES } from '../constants/tiles';
 
 export class MainScene extends Phaser.Scene {
+  private currentPlayerKey = 'clair';
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasdKeys!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
-  private collisionLayer!: Phaser.Tilemaps.TilemapLayer;
+  private switchKeys!: { ONE: Phaser.Input.Keyboard.Key; TWO: Phaser.Input.Keyboard.Key; THREE: Phaser.Input.Keyboard.Key };
   
   // Grid movement
   private isMoving = false;
   private targetX = 0;
   private targetY = 0;
-  private readonly TILE_SIZE = 32;
+  private readonly TILE_SIZE = 64;
   private readonly MOVE_SPEED = 200; // pixels per second
 
   constructor() {
@@ -20,67 +22,50 @@ export class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    // Load tileset as spritesheet so Phaser knows how to slice it
-    this.load.spritesheet('tiles', '/assets/pokemon_tileset.png', {
+    this.load.image('japanese-interior', '/assets/japanese_interior.png');
+    // Player spritesheets
+    this.load.spritesheet('clair', '/assets/players/clair.png', {
       frameWidth: 32,
-      frameHeight: 32,
+      frameHeight: 48,
     });
-    this.load.spritesheet('player', '/assets/player.png', {
+    this.load.spritesheet('sage', '/assets/players/sage_aveon.png', {
       frameWidth: 32,
-      frameHeight: 32,
+      frameHeight: 48,
+    });
+    this.load.spritesheet('wallace', '/assets/players/wallace.png', {
+      frameWidth: 32,
+      frameHeight: 48,
     });
   }
 
   create() {
-    const mapWidth = 25;
-    const mapHeight = 20;
+    // Create a simple background (optional)
+    this.add.rectangle(0, 0, this.game.config.width as number, this.game.config.height as number, 0x2a2a2a).setOrigin(0);
 
-    // Build a proper room using the tileset
-    const levelData = this.createRoomLayout(mapWidth, mapHeight);
-
-    // Create Tilemap
-    const map = this.make.tilemap({ 
-      data: levelData, 
-      tileWidth: this.TILE_SIZE, 
-      tileHeight: this.TILE_SIZE 
-    });
-    
-    // IMPORTANT: When using spritesheet, we need to tell Phaser the first tile ID
-    const tileset = map.addTilesetImage('tiles', 'tiles', 32, 32, 0, 0);
-    if (!tileset) {
-      console.error('Failed to load tileset');
-      return;
+    // Simple grid of bamboo floor tiles
+    const BLOCK = 32;
+    for (let x = 0; x < 20; x++) {
+      for (let y = 0; y < 15; y++) {
+        createCroppedSprite(this, 'japanese-interior', 'BAMBOO_FLOOR_1', x * BLOCK, y * BLOCK);
+      }
     }
 
-    // Create layers
-    this.collisionLayer = map.createLayer(0, tileset, 0, 0)!;
-    
-    // Set collision for specific tiles
-    this.collisionLayer.setCollision(Array.from(COLLISION_TILES));
-
     // Create Player
-    const startX = 10 * this.TILE_SIZE + this.TILE_SIZE / 2;
-    const startY = 10 * this.TILE_SIZE + this.TILE_SIZE / 2;
+    const startX = 10 * BLOCK;
+    const startY = 7 * BLOCK;
     
-    this.player = this.physics.add.sprite(startX, startY, 'player');
+    this.player = this.physics.add.sprite(startX, startY, this.currentPlayerKey);
     this.player.setCollideWorldBounds(true);
-    this.player.setDepth(10); // Above tiles
+    this.player.setDepth(10);
     
-    // Set initial target position
     this.targetX = this.player.x;
     this.targetY = this.player.y;
-
-    // Add collision between player and walls
-    this.physics.add.collider(this.player, this.collisionLayer);
 
     // Animations
     this.createAnimations();
 
-    // Camera
-    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-    this.cameras.main.setZoom(2.5);
-    this.cameras.main.setBounds(0, 0, mapWidth * this.TILE_SIZE, mapHeight * this.TILE_SIZE);
-    this.physics.world.setBounds(0, 0, mapWidth * this.TILE_SIZE, mapHeight * this.TILE_SIZE);
+    // Camera: fit on screen
+    this.cameras.main.setZoom(1);
 
     // Controls
     if (this.input.keyboard) {
@@ -91,11 +76,16 @@ export class MainScene extends Phaser.Scene {
         S: Phaser.Input.Keyboard.KeyCodes.S,
         D: Phaser.Input.Keyboard.KeyCodes.D,
       }) as any;
+      this.switchKeys = this.input.keyboard.addKeys({
+        ONE: Phaser.Input.Keyboard.KeyCodes.ONE,
+        TWO: Phaser.Input.Keyboard.KeyCodes.TWO,
+        THREE: Phaser.Input.Keyboard.KeyCodes.THREE,
+      }) as any;
     }
 
-    // Hotspots (interactive objects)
-    this.createHotspot(8 * this.TILE_SIZE, 8 * this.TILE_SIZE, 'about', '💼');
-    this.createHotspot(12 * this.TILE_SIZE, 8 * this.TILE_SIZE, 'projects', '🖥️');
+    // Simple hotspots
+    this.createHotspot(5 * BLOCK, 5 * BLOCK, 'about', '💼');
+    this.createHotspot(15 * BLOCK, 5 * BLOCK, 'projects', '🖥️');
   }
 
   createRoomLayout(width: number, height: number): number[][] {
@@ -106,19 +96,19 @@ export class MainScene extends Phaser.Scene {
       for (let x = 0; x < width; x++) {
         // Outer area: grass
         if (x < 5 || x >= width - 5 || y < 4 || y >= height - 4) {
-          row.push(TILES.GRASS_1);
+          row.push(TILES.GRASS_A);
         }
-        // Room walls
+        // Room walls (use stone for now)
         else if (x === 5 || x === width - 6 || y === 4 || y === height - 5) {
-          row.push(TILES.WALL_TOP);
+          row.push(TILES.FLOWER_A);
         }
         // Interior floor
         else {
           // Checkered pattern
           if ((x + y) % 2 === 0) {
-            row.push(TILES.FLOOR_TILE_CREAM);
+            row.push(TILES.STONE_A);
           } else {
-            row.push(TILES.FLOOR_TILE_CHECKERED);
+            row.push(TILES.STONE_B);
           }
         }
       }
@@ -129,29 +119,30 @@ export class MainScene extends Phaser.Scene {
   }
 
   createAnimations() {
-    if (this.anims.exists('down')) return;
+    const key = this.currentPlayerKey;
+    if (this.anims.exists('down') && this.anims.get('down').key.includes(key)) return;
 
     this.anims.create({
       key: 'down',
-      frames: this.anims.generateFrameNumbers('player', { start: 0, end: 3 }),
+      frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }),
       frameRate: 8,
       repeat: -1,
     });
     this.anims.create({
       key: 'left',
-      frames: this.anims.generateFrameNumbers('player', { start: 4, end: 7 }),
+      frames: this.anims.generateFrameNumbers(key, { start: 4, end: 7 }),
       frameRate: 8,
       repeat: -1,
     });
     this.anims.create({
       key: 'right',
-      frames: this.anims.generateFrameNumbers('player', { start: 8, end: 11 }),
+      frames: this.anims.generateFrameNumbers(key, { start: 8, end: 11 }),
       frameRate: 8,
       repeat: -1,
     });
     this.anims.create({
       key: 'up',
-      frames: this.anims.generateFrameNumbers('player', { start: 12, end: 15 }),
+      frames: this.anims.generateFrameNumbers(key, { start: 12, end: 15 }),
       frameRate: 8,
       repeat: -1,
     });
@@ -190,6 +181,15 @@ export class MainScene extends Phaser.Scene {
   update(_time: number, _delta: number) {
     if (!this.player || !this.cursors) return;
 
+    // Sprite switcher
+    if (this.switchKeys.ONE.isDown && this.currentPlayerKey !== 'clair') {
+      this.switchPlayerSprite('clair');
+    } else if (this.switchKeys.TWO.isDown && this.currentPlayerKey !== 'sage') {
+      this.switchPlayerSprite('sage');
+    } else if (this.switchKeys.THREE.isDown && this.currentPlayerKey !== 'wallace') {
+      this.switchPlayerSprite('wallace');
+    }
+
     // Grid-based movement
     const speed = this.MOVE_SPEED;
     
@@ -227,49 +227,56 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  switchPlayerSprite(key: 'clair' | 'sage' | 'wallace') {
+    const { x, y } = this.player;
+    this.currentPlayerKey = key;
+    this.player.destroy();
+    this.player = this.physics.add.sprite(x, y, key);
+    this.player.setCollideWorldBounds(true);
+    this.player.setDepth(10);
+    this.targetX = x;
+    this.targetY = y;
+    // Recreate animations for the new sprite
+    this.createAnimations();
+  }
+
   moveInDirection(direction: 'up' | 'down' | 'left' | 'right', speed: number) {
+    const BLOCK = 32;
     let newTargetX = this.player.x;
     let newTargetY = this.player.y;
     
     switch (direction) {
       case 'up':
-        newTargetY -= this.TILE_SIZE;
+        newTargetY -= BLOCK;
         this.player.anims.play('up', true);
         break;
       case 'down':
-        newTargetY += this.TILE_SIZE;
+        newTargetY += BLOCK;
         this.player.anims.play('down', true);
         break;
       case 'left':
-        newTargetX -= this.TILE_SIZE;
+        newTargetX -= BLOCK;
         this.player.anims.play('left', true);
         break;
       case 'right':
-        newTargetX += this.TILE_SIZE;
+        newTargetX += BLOCK;
         this.player.anims.play('right', true);
         break;
     }
     
-    // Check if target position is valid (not colliding)
-    const tileX = Math.floor(newTargetX / this.TILE_SIZE);
-    const tileY = Math.floor(newTargetY / this.TILE_SIZE);
-    const tile = this.collisionLayer.getTileAt(tileX, tileY);
+    // Simple bounds check (world bounds already set by setCollideWorldBounds)
+    this.targetX = newTargetX;
+    this.targetY = newTargetY;
+    this.isMoving = true;
     
-    if (!tile || !COLLISION_TILES.has(tile.index)) {
-      // Valid move
-      this.targetX = newTargetX;
-      this.targetY = newTargetY;
-      this.isMoving = true;
-      
-      // Set velocity toward target
-      const dx = this.targetX - this.player.x;
-      const dy = this.targetY - this.player.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      this.player.setVelocity(
-        (dx / distance) * speed,
-        (dy / distance) * speed
-      );
-    }
+    // Set velocity toward target
+    const dx = this.targetX - this.player.x;
+    const dy = this.targetY - this.player.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    this.player.setVelocity(
+      (dx / distance) * speed,
+      (dy / distance) * speed
+    );
   }
 }
