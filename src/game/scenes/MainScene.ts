@@ -24,7 +24,7 @@ export class MainScene extends Phaser.Scene {
   preload() {
     this.load.image('japanese-interior', '/assets/japanese_interior.png');
     // Player spritesheets
-    this.load.spritesheet('clair', '/assets/players/clair.png', {
+    this.load.spritesheet('clair', '/assets/players/clair_aveon.png', {
       frameWidth: 32,
       frameHeight: 48,
     });
@@ -32,7 +32,7 @@ export class MainScene extends Phaser.Scene {
       frameWidth: 32,
       frameHeight: 48,
     });
-    this.load.spritesheet('wallace', '/assets/players/wallace.png', {
+    this.load.spritesheet('wallace', '/assets/players/wallace_aveon.png', {
       frameWidth: 32,
       frameHeight: 48,
     });
@@ -120,28 +120,30 @@ export class MainScene extends Phaser.Scene {
 
   createAnimations() {
     const key = this.currentPlayerKey;
-    if (this.anims.exists('down') && this.anims.get('down').key.includes(key)) return;
+    const animKeyPrefix = `${key}-`;
+    // Skip if already created for this sprite
+    if (this.anims.exists(`${animKeyPrefix}down`)) return;
 
     this.anims.create({
-      key: 'down',
+      key: `${animKeyPrefix}down`,
       frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }),
       frameRate: 8,
       repeat: -1,
     });
     this.anims.create({
-      key: 'left',
+      key: `${animKeyPrefix}left`,
       frames: this.anims.generateFrameNumbers(key, { start: 4, end: 7 }),
       frameRate: 8,
       repeat: -1,
     });
     this.anims.create({
-      key: 'right',
+      key: `${animKeyPrefix}right`,
       frames: this.anims.generateFrameNumbers(key, { start: 8, end: 11 }),
       frameRate: 8,
       repeat: -1,
     });
     this.anims.create({
-      key: 'up',
+      key: `${animKeyPrefix}up`,
       frames: this.anims.generateFrameNumbers(key, { start: 12, end: 15 }),
       frameRate: 8,
       repeat: -1,
@@ -244,23 +246,24 @@ export class MainScene extends Phaser.Scene {
     const BLOCK = 32;
     let newTargetX = this.player.x;
     let newTargetY = this.player.y;
+    const animKeyPrefix = `${this.currentPlayerKey}-`;
     
     switch (direction) {
       case 'up':
         newTargetY -= BLOCK;
-        this.player.anims.play('up', true);
+        this.player.anims.play(`${animKeyPrefix}up`, true);
         break;
       case 'down':
         newTargetY += BLOCK;
-        this.player.anims.play('down', true);
+        this.player.anims.play(`${animKeyPrefix}down`, true);
         break;
       case 'left':
         newTargetX -= BLOCK;
-        this.player.anims.play('left', true);
+        this.player.anims.play(`${animKeyPrefix}left`, true);
         break;
       case 'right':
         newTargetX += BLOCK;
-        this.player.anims.play('right', true);
+        this.player.anims.play(`${animKeyPrefix}right`, true);
         break;
     }
     
