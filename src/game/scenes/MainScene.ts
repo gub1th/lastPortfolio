@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { createCroppedSprite } from '../constants/japaneseInteriorAtlas';
 
 export class MainScene extends Phaser.Scene {
   private currentPlayerKey = 'clair';
@@ -7,7 +6,6 @@ export class MainScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasdKeys!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
   private switchKeys!: { ONE: Phaser.Input.Keyboard.Key; TWO: Phaser.Input.Keyboard.Key; THREE: Phaser.Input.Keyboard.Key };
-  private walls: Phaser.Types.Physics.Arcade.ImageWithStaticBody[] = [];
   
   // Grid movement
   private isMoving = false;
@@ -20,7 +18,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('japanese-interior', '/assets/japanese_interior.png');
+    // Load organized tilesets
+    this.load.image('tiles-32x32', '/assets/tilesets/tilesheet_32x32.png');
+    this.load.image('tiles-32x64', '/assets/tilesets/tilesheet_32x64.png');
+    this.load.image('tiles-64x64', '/assets/tilesets/tilesheet_64x64.png');
     // Player spritesheets
     this.load.spritesheet('clair', '/assets/players/clair_aveon.png', {
       frameWidth: 32,
@@ -37,50 +38,59 @@ export class MainScene extends Phaser.Scene {
   }
 
   create() {
-    // Simple grid of bamboo floor tiles
     const BLOCK = 32;
     const WORLD_WIDTH = 14;
     const WORLD_HEIGHT = 10;
 
-    // Floor
-    for (let x = 0; x < WORLD_WIDTH; x++) {
-      for (let y = 0; y < WORLD_HEIGHT; y++) {
-        if (y === 0) {
-          // Top row: place 2-block-wide walls every 2 blocks
-          if (x % 2 === 0) {
-            createCroppedSprite(this, 'japanese-interior', 'WALL_EMPTY', x * BLOCK, y * BLOCK);
-            continue;
-          } else {
-            // Skip odd positions since WALL_DECORATED covers 2 blocks
-            continue;
-          }
+    // Create tilemap data (0=wall/black, 1=floor)
+    const mapData = [];
+    for (let y = 0; y < WORLD_HEIGHT; y++) {
+      const row = [];
+      for (let x = 0; x < WORLD_WIDTH; x++) {
+        if (y === 0 || y === WORLD_HEIGHT - 1 || x === 0 || x === WORLD_WIDTH - 1) {
+          row.push(0); // Black walls around edges
+        } else {
+          row.push(1); // Floor inside
         }
-        if (y === 1) continue;
-        createCroppedSprite(this, 'japanese-interior', 'BAMBOO_FLOOR_1', x * BLOCK, y * BLOCK);
       }
+      mapData.push(row);
     }
 
-    // Create Player first
+    // Create tilemap with 32x32 tiles
+    const map = this.make.tilemap({ data: mapData, tileWidth: BLOCK, tileHeight: BLOCK });
+    const tileset = map.addTilesetImage('tiles-32x32');
+    if (!tileset) {
+      throw new Error('Failed to load tileset');
+    }
+    const layer = map.createLayer(0, tileset, 0, 0);
+    if (!layer) {
+      throw new Error('Failed to create tilemap layer');
+    }
+
+    // Set collision for wall tiles (tile ID 0)
+    layer.setCollision(0);
+
+    // Create Player
     const startX = 5 * BLOCK;
     const startY = 5 * BLOCK;
     
     this.player = this.physics.add.sprite(startX, startY, this.currentPlayerKey);
-    this.player.setCollideWorldBounds(true);
     this.player.setDepth(10);
     
     this.targetX = this.player.x;
     this.targetY = this.player.y;
 
-    // // Top wall only: collision on row 0
-    // this.walls = [];
-    // for (let x = 0; x < WORLD_WIDTH; x++) {
-    //   const wall = this.physics.add.staticImage(x * BLOCK, 0, 'japanese-interior')
-    //     .setCrop(0, 0, BLOCK, BLOCK)
-    //     .setOrigin(0, 0)
-    //     .setVisible(false);
-    //   this.walls.push(wall);
-    // }
-    // this.physics.add.collider(this.player, this.walls);
+    // Add collision with tilemap
+    this.physics.add.collider(this.player, layer, () => {
+      console.log('Collision detected!');
+      // Stop all physics movement
+      this.player.setVelocity(0);
+      this.player.anims.stop();
+      this.isMoving = false;
+      // Snap to current position (don't reset to grid, let physics handle it)
+      this.targetX = this.player.x;
+      this.targetY = this.player.y;
+    });
 
     // // Top wall visuals: 2-block-wide sprites
     // // WALL_DECORATED and WALL_EMPTY are 64px wide, so place at 0, 64, 128...
@@ -206,8 +216,6 @@ export class MainScene extends Phaser.Scene {
     this.player.setDepth(10);
     this.targetX = x;
     this.targetY = y;
-    // Re-add collision with walls
-    this.physics.add.collider(this.player, this.walls);
     // Recreate animations for the new sprite
     this.createAnimations();
   }
@@ -237,7 +245,6 @@ export class MainScene extends Phaser.Scene {
         break;
     }
     
-    // Simple bounds check (world bounds already set by setCollideWorldBounds)
     this.targetX = newTargetX;
     this.targetY = newTargetY;
     this.isMoving = true;
