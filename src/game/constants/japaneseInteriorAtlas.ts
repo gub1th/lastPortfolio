@@ -14,11 +14,12 @@ export interface SpriteFrame {
 const BLOCK_SIZE = 32;
 
 export const JAPANESE_INTERIOR_FRAMES: Record<string, SpriteFrame> = {
+  BLACK_BLOCK: { x: 0, y: 0, width: BLOCK_SIZE, height: BLOCK_SIZE },
   BAMBOO_FLOOR_1: { x: 0, y: BLOCK_SIZE, width: BLOCK_SIZE, height: BLOCK_SIZE },
   TATAMI_MAT_1: { x: BLOCK_SIZE * 2, y: BLOCK_SIZE * 4, width: BLOCK_SIZE, height: BLOCK_SIZE * 2 },
   SHOJI_SCREEN_1: { x: BLOCK_SIZE, y: 0, width: BLOCK_SIZE, height: BLOCK_SIZE * 2 },
   WALL_DECORATED: { x: BLOCK_SIZE * 3, y: 0, width: BLOCK_SIZE * 2, height: BLOCK_SIZE * 2 },
-  WALL_EMPTY: { x: 0, y: BLOCK_SIZE * 3, width: BLOCK_SIZE * 2, height: BLOCK_SIZE * 2 },
+  WALL_EMPTY: { x: 0, y: BLOCK_SIZE * 2, width: BLOCK_SIZE * 2, height: BLOCK_SIZE * 2 },
   LOW_TABLE: { x: BLOCK_SIZE * 6, y: BLOCK_SIZE * 7, width: BLOCK_SIZE * 2, height: BLOCK_SIZE * 2 },
   CUSHION_SEAT: { x: BLOCK_SIZE * 4, y: BLOCK_SIZE * 8, width: BLOCK_SIZE, height: BLOCK_SIZE },
   GOURD: { x: BLOCK_SIZE * 5, y: BLOCK_SIZE * 8, width: BLOCK_SIZE, height: BLOCK_SIZE },
@@ -42,5 +43,10 @@ export function createCroppedSprite(
   const sprite = scene.add.sprite(x, y, key);
   sprite.setCrop(frame.x, frame.y, frame.width, frame.height);
   sprite.setOrigin(0, 0);
+  
+  // Offset position so cropped content aligns with grid
+  sprite.x -= frame.x;
+  sprite.y -= frame.y;
+  
   return sprite;
 }

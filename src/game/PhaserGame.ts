@@ -4,8 +4,8 @@ import { MainScene } from './scenes/MainScene';
 export const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'phaser-container',
-  width: 800,
-  height: 600,
+  width: 960,
+  height: 480,
   pixelArt: true, // Crucial for Pokemon style
   physics: {
     default: 'arcade',
@@ -16,7 +16,7 @@ export const config: Phaser.Types.Core.GameConfig = {
   },
   scene: [MainScene],
   scale: {
-    mode: Phaser.Scale.RESIZE,
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
 };

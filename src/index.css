@@ -12,3 +12,11 @@ body,
   overflow: hidden;
   background: #87CEEB; /* Sky blue background */
 }
+
+#phaser-container {
+  width: 960px;
+  height: 480px;
+  max-width: 100%;
+  max-height: 100vh;
+  margin: auto;
+}

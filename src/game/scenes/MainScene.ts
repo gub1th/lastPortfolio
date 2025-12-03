@@ -1,7 +1,5 @@
 import Phaser from 'phaser';
-import { useStore } from '../../store';
 import { createCroppedSprite } from '../constants/japaneseInteriorAtlas';
-import { TILES } from '../constants/tiles';
 
 export class MainScene extends Phaser.Scene {
   private currentPlayerKey = 'clair';
@@ -9,12 +7,12 @@ export class MainScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasdKeys!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
   private switchKeys!: { ONE: Phaser.Input.Keyboard.Key; TWO: Phaser.Input.Keyboard.Key; THREE: Phaser.Input.Keyboard.Key };
+  private walls: Phaser.Types.Physics.Arcade.ImageWithStaticBody[] = [];
   
   // Grid movement
   private isMoving = false;
   private targetX = 0;
   private targetY = 0;
-  private readonly TILE_SIZE = 64;
   private readonly MOVE_SPEED = 200; // pixels per second
 
   constructor() {
@@ -39,20 +37,32 @@ export class MainScene extends Phaser.Scene {
   }
 
   create() {
-    // Create a simple background (optional)
-    this.add.rectangle(0, 0, this.game.config.width as number, this.game.config.height as number, 0x2a2a2a).setOrigin(0);
-
     // Simple grid of bamboo floor tiles
     const BLOCK = 32;
-    for (let x = 0; x < 20; x++) {
-      for (let y = 0; y < 15; y++) {
+    const WORLD_WIDTH = 14;
+    const WORLD_HEIGHT = 10;
+
+    // Floor
+    for (let x = 0; x < WORLD_WIDTH; x++) {
+      for (let y = 0; y < WORLD_HEIGHT; y++) {
+        if (y === 0) {
+          // Top row: place 2-block-wide walls every 2 blocks
+          if (x % 2 === 0) {
+            createCroppedSprite(this, 'japanese-interior', 'WALL_EMPTY', x * BLOCK, y * BLOCK);
+            continue;
+          } else {
+            // Skip odd positions since WALL_DECORATED covers 2 blocks
+            continue;
+          }
+        }
+        if (y === 1) continue;
         createCroppedSprite(this, 'japanese-interior', 'BAMBOO_FLOOR_1', x * BLOCK, y * BLOCK);
       }
     }
 
-    // Create Player
-    const startX = 10 * BLOCK;
-    const startY = 7 * BLOCK;
+    // Create Player first
+    const startX = 5 * BLOCK;
+    const startY = 5 * BLOCK;
     
     this.player = this.physics.add.sprite(startX, startY, this.currentPlayerKey);
     this.player.setCollideWorldBounds(true);
@@ -60,6 +70,28 @@ export class MainScene extends Phaser.Scene {
     
     this.targetX = this.player.x;
     this.targetY = this.player.y;
+
+    // // Top wall only: collision on row 0
+    // this.walls = [];
+    // for (let x = 0; x < WORLD_WIDTH; x++) {
+    //   const wall = this.physics.add.staticImage(x * BLOCK, 0, 'japanese-interior')
+    //     .setCrop(0, 0, BLOCK, BLOCK)
+    //     .setOrigin(0, 0)
+    //     .setVisible(false);
+    //   this.walls.push(wall);
+    // }
+    // this.physics.add.collider(this.player, this.walls);
+
+    // // Top wall visuals: 2-block-wide sprites
+    // // WALL_DECORATED and WALL_EMPTY are 64px wide, so place at 0, 64, 128...
+    // for (let x = 0; x < WORLD_WIDTH; x += 2) {
+    //   // Alternate between decorated and empty
+    //   if (Math.floor(x / 2) % 2 === 0) {
+    //     createCroppedSprite(this, 'japanese-interior', 'WALL_DECORATED', x * BLOCK, 0);
+    //   } else {
+    //     createCroppedSprite(this, 'japanese-interior', 'WALL_EMPTY', x * BLOCK, 0);
+    //   }
+    // }
 
     // Animations
     this.createAnimations();
@@ -82,40 +114,6 @@ export class MainScene extends Phaser.Scene {
         THREE: Phaser.Input.Keyboard.KeyCodes.THREE,
       }) as any;
     }
-
-    // Simple hotspots
-    this.createHotspot(5 * BLOCK, 5 * BLOCK, 'about', '💼');
-    this.createHotspot(15 * BLOCK, 5 * BLOCK, 'projects', '🖥️');
-  }
-
-  createRoomLayout(width: number, height: number): number[][] {
-    const layout: number[][] = [];
-    
-    for (let y = 0; y < height; y++) {
-      const row: number[] = [];
-      for (let x = 0; x < width; x++) {
-        // Outer area: grass
-        if (x < 5 || x >= width - 5 || y < 4 || y >= height - 4) {
-          row.push(TILES.GRASS_A);
-        }
-        // Room walls (use stone for now)
-        else if (x === 5 || x === width - 6 || y === 4 || y === height - 5) {
-          row.push(TILES.FLOWER_A);
-        }
-        // Interior floor
-        else {
-          // Checkered pattern
-          if ((x + y) % 2 === 0) {
-            row.push(TILES.STONE_A);
-          } else {
-            row.push(TILES.STONE_B);
-          }
-        }
-      }
-      layout.push(row);
-    }
-    
-    return layout;
   }
 
   createAnimations() {
@@ -147,36 +145,6 @@ export class MainScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers(key, { start: 12, end: 15 }),
       frameRate: 8,
       repeat: -1,
-    });
-  }
-
-  createHotspot(x: number, y: number, section: 'about' | 'projects', emoji: string) {
-    const zone = this.add.zone(x, y, this.TILE_SIZE, this.TILE_SIZE);
-    this.physics.world.enable(zone);
-    (zone.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-    (zone.body as Phaser.Physics.Arcade.Body).moves = false;
-    
-    // Visual marker with emoji
-    const text = this.add.text(x, y, emoji, {
-      fontSize: '24px',
-      align: 'center',
-    }).setOrigin(0.5);
-    
-    // Floating animation
-    this.tweens.add({
-      targets: text,
-      y: y - 5,
-      duration: 1000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
-    this.physics.add.overlap(this.player, zone, () => {
-      const current = useStore.getState().currentSection;
-      if (current !== section) {
-        useStore.getState().setSection(section);
-      }
     });
   }
 
@@ -238,6 +206,8 @@ export class MainScene extends Phaser.Scene {
     this.player.setDepth(10);
     this.targetX = x;
     this.targetY = y;
+    // Re-add collision with walls
+    this.physics.add.collider(this.player, this.walls);
     // Recreate animations for the new sprite
     this.createAnimations();
   }
