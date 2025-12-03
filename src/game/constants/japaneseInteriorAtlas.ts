@@ -48,9 +48,7 @@ export function createCroppedSprite(
   sprite.setCrop(frame.x, frame.y, frame.width, frame.height);
   sprite.setOrigin(0, 0);
   
-  // Offset position so cropped content aligns with grid
-  sprite.x -= frame.x;
-  sprite.y -= frame.y;
+  // Don't offset position for tilemap use - let the sprite stay at grid position
   
   return sprite;
 }

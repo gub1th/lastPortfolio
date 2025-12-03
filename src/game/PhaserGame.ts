@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { MainScene } from './scenes/MainScene';
+import { WorldScene } from './scenes/WorldScene';
 
 export const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -14,7 +14,7 @@ export const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [MainScene],
+  scene: [WorldScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
