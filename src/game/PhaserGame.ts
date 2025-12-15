@@ -1,26 +1,13 @@
 import Phaser from 'phaser';
-import { WorldScene } from './scenes/WorldScene';
-
-export const config: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
-  parent: 'phaser-container',
-  width: 960,
-  height: 480,
-  pixelArt: true, // Crucial for Pokemon style
-  physics: {
-    default: 'arcade',
-    arcade: {
-      gravity: { y: 0, x: 0 }, // Top down, no gravity
-      debug: false,
-    },
-  },
-  scene: [WorldScene],
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  },
-};
+import { PHASER_CONFIG } from './config/GameConfig';
+import { BootScene } from './scenes/BootScene';
+import { WorldScene } from './scenes/WorldScene.new';
 
 export const initGame = () => {
+  const config: Phaser.Types.Core.GameConfig = {
+    ...PHASER_CONFIG,
+    scene: [BootScene, WorldScene],
+  };
+  
   return new Phaser.Game(config);
 };

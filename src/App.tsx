@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { useEffect, useRef } from 'react';
-import { Interface } from './components/Interface';
 import { initGame } from './game/PhaserGame';
 
 function App() {
@@ -17,12 +16,7 @@ function App() {
     };
   }, []);
 
-  return (
-    <>
-      <div id="phaser-container" style={{ width: '100%', height: '100%' }} />
-      <Interface />
-    </>
-  );
+  return <div id="phaser-container" />;
 }
 
 export default App;
